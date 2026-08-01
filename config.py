@@ -11,3 +11,7 @@ class Config:
 
     CONF_THRESHOLD = 0.5
     IOU_THRESHOLD = 0.7
+
+    IMAGE_SAVE_DIR = "outputs/images"
+
+    SAVE_INTERVAL = 1.0   # 초 단위

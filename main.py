@@ -1,4 +1,5 @@
 import cv2
+import time
 
 from config import Config
 
@@ -7,6 +8,7 @@ from core.detector import Detector
 
 from utils.fps import FPSCounter
 from utils.csv_writer import CSVWriter
+from utils.image_saver import ImageSaver
 
 
 def main():
@@ -35,6 +37,16 @@ def main():
     csv_writer = CSVWriter()
 
 
+    # Image Saver 생성
+    image_saver = ImageSaver(
+        Config.IMAGE_SAVE_DIR
+    )
+
+
+    # 마지막 이미지 저장 시간
+    last_save_time = 0
+
+
     while True:
 
         # 프레임 읽기
@@ -54,9 +66,14 @@ def main():
 
 
         # Detection 결과 CSV 저장
+        has_detection = False
+
+
         for result in results:
 
             for box in result.boxes:
+
+                has_detection = True
 
                 class_id = int(box.cls[0])
 
@@ -74,6 +91,20 @@ def main():
 
         # Bounding Box 표시
         annotated = detector.draw(results)
+
+
+        # 이미지 자동 저장
+        current_time = time.time()
+
+        if has_detection and (
+            current_time - last_save_time
+            >= Config.SAVE_INTERVAL
+        ):
+
+            image_saver.save(annotated)
+
+            last_save_time = current_time
+
 
 
         # FPS 화면 표시
