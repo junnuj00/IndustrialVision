@@ -14,4 +14,7 @@ class Config:
 
     IMAGE_SAVE_DIR = "outputs/images"
 
-    SAVE_INTERVAL = 1.0   # 초 단위
+    SAVE_INTERVAL = 1.0
+
+    # Default preprocessing mode
+    DEFAULT_PREPROCESS_MODE = "original"
