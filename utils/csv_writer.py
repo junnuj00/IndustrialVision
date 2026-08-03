@@ -1,62 +1,93 @@
 import csv
 import os
-from datetime import datetime
+
 
 
 class CSVWriter:
 
-    def __init__(self, save_path="outputs/detection_results.csv"):
 
-        self.save_path = save_path
+    def __init__(self):
 
-        # outputs 폴더 없으면 생성
-        os.makedirs("outputs", exist_ok=True)
+        self.file_path = (
+            "outputs/detection_results.csv"
+        )
 
-        # CSV 파일이 없으면 헤더 생성
-        if not os.path.exists(self.save_path):
 
-            with open(
-                self.save_path,
-                "w",
-                newline=""
-            ) as f:
+        # =========================
+        # Output Folder
+        # =========================
 
-                writer = csv.writer(f)
+        os.makedirs(
+            "outputs",
+            exist_ok=True
+        )
 
-                writer.writerow(
-                    [
-                        "Time",
-                        "Object",
-                        "Confidence",
-                        "FPS"
-                    ]
-                )
 
+
+        # =========================
+        # CSV Initialize
+        # =========================
+
+        with open(
+            self.file_path,
+            "w",
+            newline="",
+            encoding="utf-8"
+        ) as file:
+
+
+            writer = csv.writer(file)
+
+
+            writer.writerow(
+                [
+                    "Frame",
+                    "Object",
+                    "Confidence",
+                    "FPS"
+                ]
+            )
+
+
+
+    # =========================
+    # Detection Save
+    # =========================
 
     def write(
         self,
+        frame,
         object_name,
         confidence,
         fps
     ):
 
-        current_time = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
 
         with open(
-            self.save_path,
+            self.file_path,
             "a",
-            newline=""
-        ) as f:
+            newline="",
+            encoding="utf-8"
+        ) as file:
 
-            writer = csv.writer(f)
+
+            writer = csv.writer(file)
+
 
             writer.writerow(
                 [
-                    current_time,
+                    frame,
+
                     object_name,
-                    confidence,
-                    fps
+
+                    round(
+                        confidence,
+                        3
+                    ),
+
+                    round(
+                        fps,
+                        2
+                    )
                 ]
             )

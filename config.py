@@ -1,20 +1,64 @@
 class Config:
-    MODEL_PATH = "models/yolo11n.pt"
 
+    # =========================
+    # Input
+    # =========================
+
+    # "camera" or "video"
+    INPUT_MODE = "video"
+
+    # Camera
     CAMERA_INDEX = 0
 
-    WINDOW_NAME = "Industrial Vision"
+    # Video
+    VIDEO_PATH = "inputs/videos/blue.mp4"
 
-    FONT_SCALE = 1
-    FONT_THICKNESS = 2
-    TEXT_COLOR = (0, 255, 0)
+
+
+    # =========================
+    # YOLO Model
+    # =========================
+
+    MODEL_PATH = "models/yolo11n.pt"
 
     CONF_THRESHOLD = 0.5
-    IOU_THRESHOLD = 0.7
 
-    IMAGE_SAVE_DIR = "outputs/images"
+    IOU_THRESHOLD = 0.45
+
+
+
+    # =========================
+    # OpenCV Window
+    # =========================
+
+    WINDOW_NAME = (
+        "Industrial Vision Inspection"
+    )
+
+    WINDOW_WIDTH = 960
+
+    WINDOW_HEIGHT = 540
+
+
+
+    # =========================
+    # Font
+    # =========================
+
+    FONT_SCALE = 0.8
+
+    FONT_THICKNESS = 2
+
+    TEXT_COLOR = (
+        0,
+        255,
+        0
+    )
+
+
+
+    # =========================
+    # Image Save
+    # =========================
 
     SAVE_INTERVAL = 1.0
-
-    # Default preprocessing mode
-    DEFAULT_PREPROCESS_MODE = "original"

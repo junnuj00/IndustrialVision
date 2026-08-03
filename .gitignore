@@ -13,3 +13,9 @@ outputs/
 
 # YOLO training
 runs/
+
+# Video files
+inputs/videos/*.mp4
+
+# YOLO weights
+models/*.pt

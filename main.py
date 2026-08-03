@@ -1,5 +1,5 @@
 import cv2
-import time
+import os
 
 from config import Config
 
@@ -9,20 +9,138 @@ from core.preprocessor import Preprocessor
 
 from utils.fps import FPSCounter
 from utils.csv_writer import CSVWriter
-from utils.image_saver import ImageSaver
+from utils.metrics import Metrics
+
+
+
+# =========================
+# Preprocessing Mode Select
+# =========================
+
+def select_preprocess_mode():
+
+    print()
+    print("=" * 45)
+    print(" Industrial Vision Inspection ")
+    print("=" * 45)
+
+    print()
+
+    print(
+        f"Input Mode : {Config.INPUT_MODE}"
+    )
+
+    if Config.INPUT_MODE == "video":
+
+        print(
+            f"Video : {os.path.basename(Config.VIDEO_PATH)}"
+        )
+
+
+    print()
+
+    print(
+        "Select Preprocessing Mode"
+    )
+
+    print()
+
+    print(
+        "[1] Original"
+    )
+
+    print(
+        "[2] Gaussian Blur"
+    )
+
+    print(
+        "[3] CLAHE"
+    )
+
+    print(
+        "[4] Histogram Equalization"
+    )
+
+
+    while True:
+
+        choice = input(
+            "\n>> "
+        )
+
+
+        if choice == "1":
+
+            return "original"
+
+
+        elif choice == "2":
+
+            return "gaussian"
+
+
+        elif choice == "3":
+
+            return "clahe"
+
+
+        elif choice == "4":
+
+            return "histogram"
+
+
+        else:
+
+            print(
+                "Invalid Input. Select 1~4"
+            )
+
 
 
 def main():
 
-    # Camera 생성
-    camera = Camera(Config.CAMERA_INDEX)
+
+    # =========================
+    # Select Mode
+    # =========================
+
+    preprocess_mode = (
+        select_preprocess_mode()
+    )
+
+
+    print()
+
+    print(
+        f"Selected : {preprocess_mode}"
+    )
+
+
+    print()
+
+
+
+    # =========================
+    # Camera
+    # =========================
+
+    camera = Camera()
+
 
     if not camera.is_opened():
-        print("Camera Open Failed")
+
+        print(
+            "Camera / Video Open Failed"
+        )
+
         return
 
 
-    # YOLO Detector 생성
+
+    # =========================
+    # Detector
+    # =========================
+
     detector = Detector(
         Config.MODEL_PATH,
         Config.CONF_THRESHOLD,
@@ -30,60 +148,99 @@ def main():
     )
 
 
-    # Preprocessor 생성
-    preprocessor = Preprocessor()
-
-
-    # 현재 전처리 모드
-    preprocess_mode = Config.DEFAULT_PREPROCESS_MODE
-
-
-    # FPS Counter 생성
-    fps_counter = FPSCounter()
-
-
-    # CSV Writer 생성
-    csv_writer = CSVWriter()
-
-
-    # Image Saver 생성
-    image_saver = ImageSaver(
-        Config.IMAGE_SAVE_DIR
+    print(
+        f"Model : {Config.MODEL_PATH}"
     )
 
 
-    # 마지막 이미지 저장 시간
-    last_save_time = 0
 
+    # =========================
+    # Preprocessor
+    # =========================
+
+    preprocessor = Preprocessor()
+
+
+
+    # =========================
+    # Utils
+    # =========================
+
+    fps_counter = FPSCounter()
+
+    csv_writer = CSVWriter()
+
+    metrics = Metrics()
+
+
+
+    # Frame Count
+
+    frame_index = 0
+
+
+
+    # =========================
+    # Window
+    # =========================
+
+    cv2.namedWindow(
+        Config.WINDOW_NAME,
+        cv2.WINDOW_NORMAL
+    )
+
+
+    cv2.resizeWindow(
+        Config.WINDOW_NAME,
+        Config.WINDOW_WIDTH,
+        Config.WINDOW_HEIGHT
+    )
+
+
+
+    # =========================
+    # Main Loop
+    # =========================
 
     while True:
 
-        # 프레임 읽기
+
         ret, frame = camera.read()
 
+
         if not ret:
-            print("Failed to read frame.")
+
             break
 
 
 
+        frame_index += 1
+
+
+
         # =========================
-        # 키 입력 전처리 선택
+        # Preprocessing
         # =========================
 
-        if preprocess_mode == "clahe":
+        if preprocess_mode == "gaussian":
 
-            processed_frame = preprocessor.clahe(frame)
+            processed_frame = (
+                preprocessor.gaussian_blur(frame)
+            )
 
 
-        elif preprocess_mode == "gaussian":
+        elif preprocess_mode == "clahe":
 
-            processed_frame = preprocessor.gaussian_blur(frame)
+            processed_frame = (
+                preprocessor.clahe(frame)
+            )
 
 
         elif preprocess_mode == "histogram":
 
-            processed_frame = preprocessor.histogram_equalization(frame)
+            processed_frame = (
+                preprocessor.histogram_equalization(frame)
+            )
 
 
         else:
@@ -92,36 +249,59 @@ def main():
 
 
 
-        # YOLO 추론
-        results = detector.detect(processed_frame)
+        # =========================
+        # Detection
+        # =========================
+
+        results = detector.detect(
+            processed_frame
+        )
 
 
 
-        # FPS 계산
-        fps = fps_counter.update()
+        metrics.update(
+            results
+        )
 
 
 
-        # Detection 여부
-        has_detection = False
+        # =========================
+        # FPS
+        # =========================
+
+        fps = (
+            fps_counter.update()
+        )
 
 
 
-        # CSV 저장
+        # =========================
+        # Detection CSV
+        # =========================
+
         for result in results:
+
 
             for box in result.boxes:
 
-                has_detection = True
 
-                class_id = int(box.cls[0])
+                class_id = int(
+                    box.cls[0]
+                )
 
-                object_name = result.names[class_id]
 
-                confidence = float(box.conf[0])
+                object_name = (
+                    result.names[class_id]
+                )
+
+
+                confidence = float(
+                    box.conf[0]
+                )
 
 
                 csv_writer.write(
+                    frame_index,
                     object_name,
                     confidence,
                     fps
@@ -129,46 +309,35 @@ def main():
 
 
 
-        # Bounding Box 이미지 생성
-        annotated = detector.draw(results)
+        # =========================
+        # Draw
+        # =========================
+
+        annotated = detector.draw(
+            results
+        )
 
 
 
-        # 이미지 자동 저장
-
-        current_time = time.time()
-
-
-        if has_detection and (
-            current_time - last_save_time
-            >= Config.SAVE_INTERVAL
-        ):
-
-            image_saver.save(annotated)
-
-            last_save_time = current_time
-
-
-
-        # FPS 표시
+        # =========================
+        # Display
+        # =========================
 
         cv2.putText(
             annotated,
             f"FPS : {fps:.2f}",
-            (20, 40),
+            (20,40),
             cv2.FONT_HERSHEY_SIMPLEX,
             Config.FONT_SCALE,
             Config.TEXT_COLOR,
             Config.FONT_THICKNESS
         )
 
-
-        # 전처리 모드 표시
 
         cv2.putText(
             annotated,
             f"Mode : {preprocess_mode}",
-            (20, 80),
+            (20,80),
             cv2.FONT_HERSHEY_SIMPLEX,
             Config.FONT_SCALE,
             Config.TEXT_COLOR,
@@ -176,8 +345,17 @@ def main():
         )
 
 
+        cv2.putText(
+            annotated,
+            f"Frame : {frame_index}",
+            (20,120),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            Config.FONT_SCALE,
+            Config.TEXT_COLOR,
+            Config.FONT_THICKNESS
+        )
 
-        # 화면 출력
+
 
         cv2.imshow(
             Config.WINDOW_NAME,
@@ -187,53 +365,78 @@ def main():
 
 
         # =========================
-        # Keyboard Control
+        # Quit
         # =========================
 
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(1) & 0xff
 
 
-
-        if key == ord("1"):
-
-            preprocess_mode = "original"
-
-            print("Preprocess : Original")
-
-
-
-        elif key == ord("2"):
-
-            preprocess_mode = "gaussian"
-
-            print("Preprocess : Gaussian Blur")
-
-
-
-        elif key == ord("3"):
-
-            preprocess_mode = "clahe"
-
-            print("Preprocess : CLAHE")
-
-
-
-        elif key == ord("4"):
-
-            preprocess_mode = "histogram"
-
-            print("Preprocess : Histogram Equalization")
-
-
-
-        elif key == ord("q"):
+        if key == ord("q"):
 
             break
 
 
 
+    # =========================
+    # Final Metrics
+    # =========================
 
-    # 종료 처리
+    avg_fps = (
+        fps_counter.get_average()
+    )
+
+
+    result = metrics.get_result()
+
+
+
+    print()
+
+    print(
+        "=" * 35
+    )
+
+    print(
+        " Final Metrics "
+    )
+
+    print(
+        "=" * 35
+    )
+
+
+    print(
+        f"Mode : {preprocess_mode}"
+    )
+
+
+    print(
+        f"Frames : {result['Frames']}"
+    )
+
+
+    print(
+        f"Detection Count : {result['Detection Count']}"
+    )
+
+
+    print(
+        f"Average Confidence : {result['Average Confidence']}"
+    )
+
+
+    print(
+        f"Average FPS : {avg_fps:.2f}"
+    )
+
+
+
+    metrics.save_csv(
+        preprocess_mode,
+        avg_fps
+    )
+
+
 
     camera.release()
 
@@ -241,5 +444,30 @@ def main():
 
 
 
+    print()
+
+    print(
+        "Performance Saved"
+    )
+
+
+    print(
+        "outputs/metrics/performance.csv"
+    )
+
+
+    print(
+        "Detection Saved"
+    )
+
+
+    print(
+        "outputs/detection_results.csv"
+    )
+
+
+
+
 if __name__ == "__main__":
+
     main()
