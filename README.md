@@ -1,8 +1,6 @@
-# Experimental Results
+## Experimental Results
 
-The preprocessing performance was evaluated using the same input video and the YOLO11n model. Detection accuracy and real-time performance were compared across four preprocessing methods.
-
-## Table 1. Quantitative Comparison
+### Quantitative Comparison
 
 | Preprocessing Method | Detection Count | Average Confidence | Average FPS | Remark |
 |----------------------|----------------:|-------------------:|------------:|--------|
@@ -11,38 +9,27 @@ The preprocessing performance was evaluated using the same input video and the Y
 | **CLAHE** | **256** | **0.679** | 19.94 | **Best Detection** |
 | Histogram Equalization | 79 | 0.640 | 24.43 | Lowest Detection |
 
----
-
-## Figure 1. Detection Performance
+### Detection Performance
 
 ![Detection Performance](assets/figure1_detection_performance.png)
 
-CLAHE achieved the highest number of detected objects and the highest average confidence, indicating improved detection performance through local contrast enhancement.
+CLAHE achieved the highest detection count and average confidence.
 
----
-
-## Figure 2. Real-time Performance
+### Real-time Performance
 
 ![Real-time Performance](assets/figure2_fps.png)
 
-The Original input achieved the highest processing speed, while CLAHE required additional computation, resulting in lower FPS.
+The original input achieved the highest average FPS.
 
----
+### Accuracy-Speed Trade-off
 
-## Figure 3. Accuracy–Speed Trade-off
+![Accuracy-Speed Trade-off](assets/figure3_tradeoff.png)
 
-![Trade-off](assets/figure3_tradeoff.png)
+CLAHE improved detection performance at the cost of processing speed.
 
-The trade-off analysis illustrates that CLAHE provides superior detection performance at the expense of inference speed, whereas the Original input maintains the highest real-time efficiency.
+### Graph Generation
 
----
-
-## Visualization
-
-The experimental graphs were automatically generated from the recorded metrics using **Matplotlib**.
+The figures were generated from `outputs/metrics/performance.csv` using Matplotlib.
 
 ```bash
 python scripts/graphs.py
-```
-
-The script reads the experimental results stored in `outputs/metrics/performance.csv` and generates all figures included in this README.
