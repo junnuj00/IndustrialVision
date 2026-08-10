@@ -32,6 +32,7 @@ REQUIRED_COLUMNS = {
     "Average FPS",
 }
 
+
 plt.rcParams.update(
     {
         "font.size": 11,
@@ -51,6 +52,7 @@ plt.rcParams.update(
 
 def load_data() -> tuple[list[str], list[int], list[float], list[float]]:
     """Load performance metrics from CSV."""
+
     if not CSV_PATH.exists():
         raise FileNotFoundError(
             f"Performance CSV not found: {CSV_PATH}\n"
@@ -69,6 +71,7 @@ def load_data() -> tuple[list[str], list[int], list[float], list[float]]:
             raise ValueError("performance.csv has no header.")
 
         missing_columns = REQUIRED_COLUMNS - set(reader.fieldnames)
+
         if missing_columns:
             missing = ", ".join(sorted(missing_columns))
             raise ValueError(f"Missing required CSV columns: {missing}")
@@ -79,38 +82,58 @@ def load_data() -> tuple[list[str], list[int], list[float], list[float]]:
                 detection.append(int(row["Detection Count"]))
                 confidence.append(float(row["Average Confidence"]))
                 fps.append(float(row["Average FPS"]))
+
             except (TypeError, ValueError, KeyError) as error:
                 raise ValueError(
                     f"Invalid data in performance.csv at row {row_number}."
                 ) from error
 
     if not methods:
-        raise ValueError("performance.csv contains no experiment results.")
+        raise ValueError(
+            "performance.csv contains no experiment results."
+        )
 
     return methods, detection, confidence, fps
 
 
-def get_colors(methods: Sequence[str], highlight: str) -> list[str]:
+def get_colors(
+    methods: Sequence[str],
+    highlight: str,
+) -> list[str]:
     """Return colors with one highlighted preprocessing method."""
+
     return [
-        MAIN_COLOR if method.lower() == highlight.lower() else SECONDARY_COLOR
+        MAIN_COLOR
+        if method.lower() == highlight.lower()
+        else SECONDARY_COLOR
         for method in methods
     ]
 
 
-def display_names(methods: Iterable[str]) -> list[str]:
+def display_names(
+    methods: Iterable[str],
+) -> list[str]:
     """Convert internal mode names into readable graph labels."""
+
     name_map = {
         "original": "Original",
         "gaussian": "Gaussian",
         "clahe": "CLAHE",
         "histogram": "Histogram EQ",
     }
-    return [name_map.get(method.lower(), method.title()) for method in methods]
+
+    return [
+        name_map.get(method.lower(), method.title())
+        for method in methods
+    ]
 
 
-def style_axis(ax: Axes, grid_axis: str = "y") -> None:
+def style_axis(
+    ax: Axes,
+    grid_axis: str = "y",
+) -> None:
     """Apply a clean GitHub technical-blog style to an axis."""
+
     ax.grid(
         axis=grid_axis,
         linestyle="--",
@@ -119,7 +142,9 @@ def style_axis(ax: Axes, grid_axis: str = "y") -> None:
         alpha=0.8,
         zorder=0,
     )
+
     ax.set_axisbelow(True)
+
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -131,12 +156,18 @@ def add_value_labels(
     offset_ratio: float = 0.015,
 ) -> None:
     """Display numeric values above bars."""
-    heights = [bar.get_height() for bar in bars]
+
+    heights = [
+        bar.get_height()
+        for bar in bars
+    ]
+
     max_height = max(heights) if heights else 0
     offset = max_height * offset_ratio
 
     for bar in bars:
         height = bar.get_height()
+
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             height + offset,
@@ -159,8 +190,12 @@ def draw_bar_chart(
     value_format: str,
 ) -> None:
     """Draw a styled bar chart."""
+
     labels = display_names(methods)
-    colors = get_colors(methods, highlight)
+    colors = get_colors(
+        methods,
+        highlight,
+    )
 
     bars = ax.bar(
         labels,
@@ -172,27 +207,53 @@ def draw_bar_chart(
         zorder=2,
     )
 
-    ax.set_title(title, pad=12)
-    ax.set_ylabel(ylabel)
+    ax.set_title(
+        title,
+        pad=12,
+    )
+
+    ax.set_ylabel(
+        ylabel,
+    )
+
     style_axis(ax)
-    add_value_labels(ax, bars, value_format)
+
+    add_value_labels(
+        ax,
+        bars,
+        value_format,
+    )
 
     max_value = max(values)
-    ax.set_ylim(0, max_value * 1.18)
+
+    ax.set_ylim(
+        0,
+        max_value * 1.18,
+    )
 
 
-def save_figure(fig: Figure, filename: str) -> None:
+def save_figure(
+    fig: Figure,
+    filename: str,
+) -> None:
     """Save and close a Matplotlib figure."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    OUTPUT_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     output_path = OUTPUT_DIR / filename
 
     fig.tight_layout()
+
     fig.savefig(
         output_path,
         dpi=DPI,
         bbox_inches="tight",
         facecolor="white",
     )
+
     plt.close(fig)
 
 
@@ -204,6 +265,7 @@ def add_best_annotation(
     offset_ratio: float,
 ) -> None:
     """Add a small highlight label above the best bar."""
+
     ax.text(
         index,
         value * (1 + offset_ratio),
@@ -222,7 +284,12 @@ def create_detection_figure(
     confidence: Sequence[float],
 ) -> None:
     """Create detection count and average confidence comparison."""
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(12, 5),
+    )
 
     draw_bar_chart(
         ax=axes[0],
@@ -234,7 +301,10 @@ def create_detection_figure(
         value_format=".0f",
     )
 
-    best_detection_index = detection.index(max(detection))
+    best_detection_index = detection.index(
+        max(detection)
+    )
+
     add_best_annotation(
         axes[0],
         best_detection_index,
@@ -253,7 +323,10 @@ def create_detection_figure(
         value_format=".3f",
     )
 
-    best_confidence_index = confidence.index(max(confidence))
+    best_confidence_index = confidence.index(
+        max(confidence)
+    )
+
     add_best_annotation(
         axes[1],
         best_confidence_index,
@@ -269,7 +342,10 @@ def create_detection_figure(
         y=1.02,
     )
 
-    save_figure(fig, "figure1_detection_performance.png")
+    save_figure(
+        fig,
+        "figure1_detection_performance.png",
+    )
 
 
 def create_fps_figure(
@@ -277,7 +353,10 @@ def create_fps_figure(
     fps: Sequence[float],
 ) -> None:
     """Create average FPS comparison."""
-    fig, ax = plt.subplots(figsize=(8, 5))
+
+    fig, ax = plt.subplots(
+        figsize=(8, 5)
+    )
 
     draw_bar_chart(
         ax=ax,
@@ -289,7 +368,10 @@ def create_fps_figure(
         value_format=".2f",
     )
 
-    fastest_index = fps.index(max(fps))
+    fastest_index = fps.index(
+        max(fps)
+    )
+
     add_best_annotation(
         ax,
         fastest_index,
@@ -305,7 +387,10 @@ def create_fps_figure(
         y=1.02,
     )
 
-    save_figure(fig, "figure2_fps.png")
+    save_figure(
+        fig,
+        "figure2_fps.png",
+    )
 
 
 def create_tradeoff_figure(
@@ -313,11 +398,20 @@ def create_tradeoff_figure(
     detection: Sequence[int],
     fps: Sequence[float],
 ) -> None:
-    """Create an accuracy-speed trade-off scatter plot."""
-    fig, ax = plt.subplots(figsize=(8, 6))
+    """Create a detection performance-speed trade-off scatter plot."""
 
-    labels = display_names(methods)
-    colors = get_colors(methods, "clahe")
+    fig, ax = plt.subplots(
+        figsize=(8, 6)
+    )
+
+    labels = display_names(
+        methods
+    )
+
+    colors = get_colors(
+        methods,
+        "clahe",
+    )
 
     ax.scatter(
         fps,
@@ -332,7 +426,10 @@ def create_tradeoff_figure(
     for index, label in enumerate(labels):
         ax.annotate(
             label,
-            (fps[index], detection[index]),
+            (
+                fps[index],
+                detection[index],
+            ),
             xytext=(8, 8),
             textcoords="offset points",
             fontsize=10,
@@ -340,10 +437,16 @@ def create_tradeoff_figure(
         )
 
     if "clahe" in methods:
-        clahe_index = methods.index("clahe")
+        clahe_index = methods.index(
+            "clahe"
+        )
+
         ax.annotate(
-            "Accuracy priority",
-            (fps[clahe_index], detection[clahe_index]),
+            "Detection priority",
+            (
+                fps[clahe_index],
+                detection[clahe_index],
+            ),
             xytext=(-80, 45),
             textcoords="offset points",
             arrowprops={
@@ -357,10 +460,16 @@ def create_tradeoff_figure(
         )
 
     if "original" in methods:
-        original_index = methods.index("original")
+        original_index = methods.index(
+            "original"
+        )
+
         ax.annotate(
             "Speed priority",
-            (fps[original_index], detection[original_index]),
+            (
+                fps[original_index],
+                detection[original_index],
+            ),
             xytext=(-80, -42),
             textcoords="offset points",
             arrowprops={
@@ -373,35 +482,65 @@ def create_tradeoff_figure(
             color=ANNOTATION_COLOR,
         )
 
-    ax.set_xlabel("Average FPS")
-    ax.set_ylabel("Detection Count")
-    ax.set_title("Detection Performance vs. Processing Speed", pad=12)
-    style_axis(ax, grid_axis="both")
+    ax.set_xlabel(
+        "Average FPS"
+    )
+
+    ax.set_ylabel(
+        "Detection Count"
+    )
+
+    ax.set_title(
+        "Detection Performance vs. Processing Speed",
+        pad=12,
+    )
+
+    style_axis(
+        ax,
+        grid_axis="both",
+    )
 
     x_margin = max(fps) - min(fps)
     y_margin = max(detection) - min(detection)
 
     ax.set_xlim(
-        min(fps) - max(x_margin * 0.15, 0.5),
-        max(fps) + max(x_margin * 0.15, 0.5),
+        min(fps) - max(
+            x_margin * 0.15,
+            0.5,
+        ),
+        max(fps) + max(
+            x_margin * 0.15,
+            0.5,
+        ),
     )
+
     ax.set_ylim(
-        min(detection) - max(y_margin * 0.12, 10),
-        max(detection) + max(y_margin * 0.18, 10),
+        min(detection) - max(
+            y_margin * 0.12,
+            10,
+        ),
+        max(detection) + max(
+            y_margin * 0.18,
+            10,
+        ),
     )
 
     fig.suptitle(
-        "Figure 3. Accuracy-Speed Trade-off",
+        "Figure 3. Detection Performance-Speed Trade-off",
         fontsize=FIGURE_TITLE_SIZE,
         fontweight="bold",
         y=1.02,
     )
 
-    save_figure(fig, "figure3_tradeoff.png")
+    save_figure(
+        fig,
+        "figure3_tradeoff.png",
+    )
 
 
 def main() -> None:
     """Generate all README figures."""
+
     print("=" * 48)
     print(" Industrial Vision Graph Generator")
     print("=" * 48)
@@ -409,25 +548,56 @@ def main() -> None:
     try:
         methods, detection, confidence, fps = load_data()
 
-        print(f"[INFO] Loaded metrics from: {CSV_PATH}")
+        print(
+            f"[INFO] Loaded metrics from: {CSV_PATH}"
+        )
 
-        create_detection_figure(methods, detection, confidence)
-        print("[INFO] Figure 1 created.")
+        create_detection_figure(
+            methods,
+            detection,
+            confidence,
+        )
 
-        create_fps_figure(methods, fps)
-        print("[INFO] Figure 2 created.")
+        print(
+            "[INFO] Figure 1 created."
+        )
 
-        create_tradeoff_figure(methods, detection, fps)
-        print("[INFO] Figure 3 created.")
+        create_fps_figure(
+            methods,
+            fps,
+        )
 
-    except (FileNotFoundError, ValueError) as error:
-        print(f"[ERROR] {error}")
+        print(
+            "[INFO] Figure 2 created."
+        )
+
+        create_tradeoff_figure(
+            methods,
+            detection,
+            fps,
+        )
+
+        print(
+            "[INFO] Figure 3 created."
+        )
+
+    except (
+        FileNotFoundError,
+        ValueError,
+    ) as error:
+        print(
+            f"[ERROR] {error}"
+        )
+
         return
 
     print("=" * 48)
     print(" Graph generation complete")
     print("=" * 48)
-    print(f"Saved location: {OUTPUT_DIR}")
+
+    print(
+        f"Saved location: {OUTPUT_DIR}"
+    )
 
 
 if __name__ == "__main__":
