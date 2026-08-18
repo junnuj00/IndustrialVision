@@ -1,486 +1,614 @@
-from __future__ import annotations
-
-import csv
 from pathlib import Path
-from typing import Iterable, Sequence
 
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+import pandas as pd
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-CSV_PATH = BASE_DIR / "outputs" / "metrics" / "performance.csv"
-OUTPUT_DIR = BASE_DIR / "assets"
+# ============================================
+# Paths
+# ============================================
 
-MAIN_COLOR = "#4C78A8"
-SECONDARY_COLOR = "#C9CED6"
-GRID_COLOR = "#E5E7EB"
-TEXT_COLOR = "#333333"
-ANNOTATION_COLOR = "#666666"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-DPI = 300
-TITLE_SIZE = 16
-FIGURE_TITLE_SIZE = 18
-LABEL_SIZE = 12
-VALUE_SIZE = 10
+CSV_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "performance.csv"
+)
 
-REQUIRED_COLUMNS = {
-    "Mode",
-    "Detection Count",
-    "Average Confidence",
-    "Average FPS",
-}
+ASSETS_DIR = (
+    PROJECT_ROOT
+    / "assets"
+)
 
-
-plt.rcParams.update(
-    {
-        "font.size": 11,
-        "axes.titlesize": TITLE_SIZE,
-        "axes.titleweight": "bold",
-        "axes.labelsize": LABEL_SIZE,
-        "axes.labelcolor": TEXT_COLOR,
-        "axes.edgecolor": TEXT_COLOR,
-        "xtick.color": TEXT_COLOR,
-        "ytick.color": TEXT_COLOR,
-        "text.color": TEXT_COLOR,
-        "axes.facecolor": "white",
-        "figure.facecolor": "white",
-    }
+ASSETS_DIR.mkdir(
+    parents=True,
+    exist_ok=True
 )
 
 
-def load_data() -> tuple[list[str], list[int], list[float], list[float]]:
-    """Load performance metrics from CSV."""
+# ============================================
+# Mode Display Names
+# ============================================
+
+MODE_NAMES = {
+    "original": "Original",
+    "gaussian": "Gaussian Blur",
+    "clahe": "CLAHE",
+    "histogram": "Histogram Eq."
+}
+
+
+# ============================================
+# Load Data
+# ============================================
+
+def load_data():
 
     if not CSV_PATH.exists():
+
         raise FileNotFoundError(
-            f"Performance CSV not found: {CSV_PATH}\n"
-            "Run main.py and create performance.csv first."
+            f"CSV file not found: {CSV_PATH}"
         )
 
-    methods: list[str] = []
-    detection: list[int] = []
-    confidence: list[float] = []
-    fps: list[float] = []
 
-    with CSV_PATH.open(newline="", encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-
-        if reader.fieldnames is None:
-            raise ValueError("performance.csv has no header.")
-
-        missing_columns = REQUIRED_COLUMNS - set(reader.fieldnames)
-
-        if missing_columns:
-            missing = ", ".join(sorted(missing_columns))
-            raise ValueError(f"Missing required CSV columns: {missing}")
-
-        for row_number, row in enumerate(reader, start=2):
-            try:
-                methods.append(row["Mode"].strip().lower())
-                detection.append(int(row["Detection Count"]))
-                confidence.append(float(row["Average Confidence"]))
-                fps.append(float(row["Average FPS"]))
-
-            except (TypeError, ValueError, KeyError) as error:
-                raise ValueError(
-                    f"Invalid data in performance.csv at row {row_number}."
-                ) from error
-
-    if not methods:
-        raise ValueError(
-            "performance.csv contains no experiment results."
-        )
-
-    return methods, detection, confidence, fps
+    df = pd.read_csv(
+        CSV_PATH
+    )
 
 
-def get_colors(
-    methods: Sequence[str],
-    highlight: str,
-) -> list[str]:
-    """Return colors with one highlighted preprocessing method."""
-
-    return [
-        MAIN_COLOR
-        if method.lower() == highlight.lower()
-        else SECONDARY_COLOR
-        for method in methods
-    ]
-
-
-def display_names(
-    methods: Iterable[str],
-) -> list[str]:
-    """Convert internal mode names into readable graph labels."""
-
-    name_map = {
-        "original": "Original",
-        "gaussian": "Gaussian",
-        "clahe": "CLAHE",
-        "histogram": "Histogram EQ",
+    required_columns = {
+        "Mode",
+        "Detection Count",
+        "Average Confidence",
+        "Average FPS"
     }
 
-    return [
-        name_map.get(method.lower(), method.title())
-        for method in methods
-    ]
 
-
-def style_axis(
-    ax: Axes,
-    grid_axis: str = "y",
-) -> None:
-    """Apply a clean GitHub technical-blog style to an axis."""
-
-    ax.grid(
-        axis=grid_axis,
-        linestyle="--",
-        linewidth=0.8,
-        color=GRID_COLOR,
-        alpha=0.8,
-        zorder=0,
+    missing_columns = (
+        required_columns
+        - set(df.columns)
     )
 
-    ax.set_axisbelow(True)
 
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    if missing_columns:
 
-
-def add_value_labels(
-    ax: Axes,
-    bars,
-    value_format: str,
-    offset_ratio: float = 0.015,
-) -> None:
-    """Display numeric values above bars."""
-
-    heights = [
-        bar.get_height()
-        for bar in bars
-    ]
-
-    max_height = max(heights) if heights else 0
-    offset = max_height * offset_ratio
-
-    for bar in bars:
-        height = bar.get_height()
-
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            height + offset,
-            format(height, value_format),
-            ha="center",
-            va="bottom",
-            fontsize=VALUE_SIZE,
-            fontweight="bold",
-            color=TEXT_COLOR,
+        raise ValueError(
+            "Missing required CSV columns: "
+            + ", ".join(
+                sorted(missing_columns)
+            )
         )
 
 
-def draw_bar_chart(
-    ax: Axes,
-    methods: Sequence[str],
-    values: Sequence[float],
-    title: str,
-    ylabel: str,
-    highlight: str,
-    value_format: str,
-) -> None:
-    """Draw a styled bar chart."""
+    return df
 
-    labels = display_names(methods)
-    colors = get_colors(
-        methods,
-        highlight,
+
+# ============================================
+# Mode Labels
+# ============================================
+
+def get_mode_labels(df):
+
+    return [
+        MODE_NAMES.get(
+            mode,
+            mode
+        )
+        for mode in df["Mode"]
+    ]
+
+
+# ============================================
+# Figure 1
+# Detection Count + Confidence
+# ============================================
+
+def create_detection_performance_graph(
+    df
+):
+
+    modes = get_mode_labels(
+        df
     )
 
-    bars = ax.bar(
-        labels,
-        values,
-        color=colors,
-        width=0.68,
-        edgecolor="white",
-        linewidth=0.8,
-        zorder=2,
+    detection_counts = (
+        df["Detection Count"]
     )
 
-    ax.set_title(
-        title,
-        pad=12,
+    confidences = (
+        df["Average Confidence"]
     )
 
-    ax.set_ylabel(
-        ylabel,
+
+    fig, ax1 = plt.subplots(
+        figsize=(10, 6.5)
     )
 
-    style_axis(ax)
 
-    add_value_labels(
-        ax,
-        bars,
-        value_format,
+    # ----------------------------------------
+    # Detection Count
+    # ----------------------------------------
+
+    bars = ax1.bar(
+        modes,
+        detection_counts,
+        alpha=0.8,
+        label="Detection Count"
     )
 
-    max_value = max(values)
 
-    ax.set_ylim(
+    ax1.set_title(
+        "Detection Performance by Preprocessing Method",
+        pad=45
+    )
+
+    ax1.set_xlabel(
+        "Preprocessing Method"
+    )
+
+    ax1.set_ylabel(
+        "Detection Count"
+    )
+
+
+    # ----------------------------------------
+    # Detection Count Y-axis Margin
+    # ----------------------------------------
+
+    ax1.set_ylim(
         0,
-        max_value * 1.18,
+        detection_counts.max() * 1.22
     )
 
 
-def save_figure(
-    fig: Figure,
-    filename: str,
-) -> None:
-    """Save and close a Matplotlib figure."""
-
-    OUTPUT_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
+    ax1.grid(
+        axis="y",
+        alpha=0.25
     )
 
-    output_path = OUTPUT_DIR / filename
+
+    # ----------------------------------------
+    # Highest Detection Count
+    # ----------------------------------------
+
+    max_detection_position = (
+        detection_counts
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+
+    # ----------------------------------------
+    # Detection Count Labels
+    # ----------------------------------------
+
+    for position, (
+        bar,
+        value
+    ) in enumerate(
+        zip(
+            bars,
+            detection_counts
+        )
+    ):
+
+        label = (
+            f"{int(value):,}"
+        )
+
+
+        if (
+            position
+            == max_detection_position
+        ):
+
+            label += (
+                "\nHighest Count"
+            )
+
+
+        ax1.text(
+            bar.get_x()
+            + bar.get_width() / 2,
+
+            value + 18,
+
+            label,
+
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+
+    # ----------------------------------------
+    # Average Confidence Axis
+    # ----------------------------------------
+
+    ax2 = ax1.twinx()
+
+
+    ax2.plot(
+        modes,
+        confidences,
+        marker="o",
+        linewidth=2,
+        label="Average Confidence"
+    )
+
+
+    ax2.set_ylabel(
+        "Average Confidence"
+    )
+
+
+    confidence_min = (
+        max(
+            0.0,
+            confidences.min()
+            - 0.05
+        )
+    )
+
+    confidence_max = (
+        min(
+            1.0,
+            confidences.max()
+            + 0.07
+        )
+    )
+
+
+    ax2.set_ylim(
+        confidence_min,
+        confidence_max
+    )
+
+
+    # ----------------------------------------
+    # Highest Confidence
+    # ----------------------------------------
+
+    max_confidence_position = (
+        confidences
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+
+    # ----------------------------------------
+    # Confidence Labels
+    # All labels below the points
+    # ----------------------------------------
+
+    for position, value in enumerate(
+        confidences
+    ):
+
+        label = (
+            f"{value:.3f}"
+        )
+
+
+        if (
+            position
+            == max_confidence_position
+        ):
+
+            label += (
+                "\nHighest Confidence"
+            )
+
+
+        ax2.annotate(
+            label,
+
+            (
+                position,
+                value
+            ),
+
+            textcoords="offset points",
+
+            xytext=(0, -12),
+
+            ha="center",
+            va="top",
+
+            fontsize=9
+        )
+
+
+    # ----------------------------------------
+    # Legend
+    # ----------------------------------------
+
+    handles1, labels1 = (
+        ax1.get_legend_handles_labels()
+    )
+
+    handles2, labels2 = (
+        ax2.get_legend_handles_labels()
+    )
+
+
+    ax1.legend(
+        handles1 + handles2,
+        labels1 + labels2,
+
+        loc="upper center",
+
+        bbox_to_anchor=(
+            0.5,
+            1.10
+        ),
+
+        ncol=2,
+
+        frameon=True
+    )
+
 
     fig.tight_layout()
 
+
+    output_path = (
+        ASSETS_DIR
+        / "figure1_detection_performance.png"
+    )
+
+
     fig.savefig(
         output_path,
-        dpi=DPI,
-        bbox_inches="tight",
-        facecolor="white",
-    )
-
-    plt.close(fig)
-
-
-def add_best_annotation(
-    ax: Axes,
-    index: int,
-    value: float,
-    label: str,
-    offset_ratio: float,
-) -> None:
-    """Add a small highlight label above the best bar."""
-
-    ax.text(
-        index,
-        value * (1 + offset_ratio),
-        label,
-        ha="center",
-        va="bottom",
-        fontsize=10,
-        fontweight="bold",
-        color=MAIN_COLOR,
+        dpi=200,
+        bbox_inches="tight"
     )
 
 
-def create_detection_figure(
-    methods: Sequence[str],
-    detection: Sequence[int],
-    confidence: Sequence[float],
-) -> None:
-    """Create detection count and average confidence comparison."""
-
-    fig, axes = plt.subplots(
-        1,
-        2,
-        figsize=(12, 5),
-    )
-
-    draw_bar_chart(
-        ax=axes[0],
-        methods=methods,
-        values=detection,
-        title="Detection Count",
-        ylabel="Detected Objects",
-        highlight="clahe",
-        value_format=".0f",
-    )
-
-    best_detection_index = detection.index(
-        max(detection)
-    )
-
-    add_best_annotation(
-        axes[0],
-        best_detection_index,
-        detection[best_detection_index],
-        "Best",
-        0.10,
-    )
-
-    draw_bar_chart(
-        ax=axes[1],
-        methods=methods,
-        values=confidence,
-        title="Average Confidence",
-        ylabel="Confidence Score",
-        highlight="clahe",
-        value_format=".3f",
-    )
-
-    best_confidence_index = confidence.index(
-        max(confidence)
-    )
-
-    add_best_annotation(
-        axes[1],
-        best_confidence_index,
-        confidence[best_confidence_index],
-        "Highest",
-        0.10,
-    )
-
-    fig.suptitle(
-        "Figure 1. Detection Performance Comparison",
-        fontsize=FIGURE_TITLE_SIZE,
-        fontweight="bold",
-        y=1.02,
-    )
-
-    save_figure(
-        fig,
-        "figure1_detection_performance.png",
+    plt.close(
+        fig
     )
 
 
-def create_fps_figure(
-    methods: Sequence[str],
-    fps: Sequence[float],
-) -> None:
-    """Create average FPS comparison."""
+    print(
+        f"Saved: {output_path}"
+    )
+
+
+# ============================================
+# Figure 2
+# FPS Performance
+# ============================================
+
+def create_fps_graph(
+    df
+):
+
+    modes = get_mode_labels(
+        df
+    )
+
+    fps_values = (
+        df["Average FPS"]
+    )
+
 
     fig, ax = plt.subplots(
-        figsize=(8, 5)
-    )
-
-    draw_bar_chart(
-        ax=ax,
-        methods=methods,
-        values=fps,
-        title="Average Processing Speed",
-        ylabel="Frames Per Second",
-        highlight="original",
-        value_format=".2f",
-    )
-
-    fastest_index = fps.index(
-        max(fps)
-    )
-
-    add_best_annotation(
-        ax,
-        fastest_index,
-        fps[fastest_index],
-        "Fastest",
-        0.10,
-    )
-
-    fig.suptitle(
-        "Figure 2. Real-time Performance",
-        fontsize=FIGURE_TITLE_SIZE,
-        fontweight="bold",
-        y=1.02,
-    )
-
-    save_figure(
-        fig,
-        "figure2_fps.png",
+        figsize=(9, 5.5)
     )
 
 
-def create_tradeoff_figure(
-    methods: Sequence[str],
-    detection: Sequence[int],
-    fps: Sequence[float],
-) -> None:
-    """Create a detection performance-speed trade-off scatter plot."""
+    bars = ax.bar(
+        modes,
+        fps_values,
+        alpha=0.8
+    )
+
+
+    ax.set_title(
+        "Real-Time Processing Performance"
+    )
+
+    ax.set_xlabel(
+        "Preprocessing Method"
+    )
+
+    ax.set_ylabel(
+        "Average FPS"
+    )
+
+
+    # ----------------------------------------
+    # Y-axis Margin
+    # ----------------------------------------
+
+    ax.set_ylim(
+        0,
+        fps_values.max() * 1.20
+    )
+
+
+    ax.grid(
+        axis="y",
+        alpha=0.25
+    )
+
+
+    # ----------------------------------------
+    # Highest FPS
+    # ----------------------------------------
+
+    max_fps_position = (
+        fps_values
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+
+    # ----------------------------------------
+    # FPS Labels
+    # ----------------------------------------
+
+    for position, (
+        bar,
+        value
+    ) in enumerate(
+        zip(
+            bars,
+            fps_values
+        )
+    ):
+
+        label = (
+            f"{value:.2f}"
+        )
+
+
+        if (
+            position
+            == max_fps_position
+        ):
+
+            label += (
+                "\nHighest FPS"
+            )
+
+
+        ax.text(
+            bar.get_x()
+            + bar.get_width() / 2,
+
+            value + 0.25,
+
+            label,
+
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+
+    fig.tight_layout()
+
+
+    output_path = (
+        ASSETS_DIR
+        / "figure2_fps.png"
+    )
+
+
+    fig.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight"
+    )
+
+
+    plt.close(
+        fig
+    )
+
+
+    print(
+        f"Saved: {output_path}"
+    )
+
+
+# ============================================
+# Figure 3
+# Detection / Speed Trade-off
+# ============================================
+
+def create_tradeoff_graph(
+    df
+):
+
+    modes = get_mode_labels(
+        df
+    )
+
+    detection_counts = (
+        df["Detection Count"]
+    )
+
+    fps_values = (
+        df["Average FPS"]
+    )
+
+    confidences = (
+        df["Average Confidence"]
+    )
+
 
     fig, ax = plt.subplots(
-        figsize=(8, 6)
+        figsize=(9, 6)
     )
 
-    labels = display_names(
-        methods
-    )
 
-    colors = get_colors(
-        methods,
-        "clahe",
-    )
+    # ----------------------------------------
+    # Scatter
+    # ----------------------------------------
 
     ax.scatter(
-        fps,
-        detection,
-        s=135,
-        c=colors,
-        edgecolors="white",
-        linewidths=1.5,
-        zorder=3,
+        fps_values,
+        detection_counts,
+        s=120
     )
 
-    for index, label in enumerate(labels):
+
+    # ----------------------------------------
+    # Point Labels
+    # ----------------------------------------
+
+    for (
+        mode,
+        fps,
+        count,
+        confidence
+    ) in zip(
+        modes,
+        fps_values,
+        detection_counts,
+        confidences
+    ):
+
+        label = (
+            f"{mode}\n"
+            f"Conf: {confidence:.3f}"
+        )
+
+
         ax.annotate(
             label,
+
             (
-                fps[index],
-                detection[index],
+                fps,
+                count
             ),
+
+            textcoords="offset points",
+
             xytext=(8, 8),
-            textcoords="offset points",
-            fontsize=10,
-            color=TEXT_COLOR,
+
+            fontsize=9
         )
 
-    if "clahe" in methods:
-        clahe_index = methods.index(
-            "clahe"
-        )
 
-        ax.annotate(
-            "Detection priority",
-            (
-                fps[clahe_index],
-                detection[clahe_index],
-            ),
-            xytext=(-80, 45),
-            textcoords="offset points",
-            arrowprops={
-                "arrowstyle": "->",
-                "color": MAIN_COLOR,
-                "linewidth": 1.5,
-            },
-            fontsize=10,
-            fontweight="bold",
-            color=MAIN_COLOR,
-        )
+    # ----------------------------------------
+    # Axis
+    # ----------------------------------------
 
-    if "original" in methods:
-        original_index = methods.index(
-            "original"
-        )
-
-        ax.annotate(
-            "Speed priority",
-            (
-                fps[original_index],
-                detection[original_index],
-            ),
-            xytext=(-80, -42),
-            textcoords="offset points",
-            arrowprops={
-                "arrowstyle": "->",
-                "color": ANNOTATION_COLOR,
-                "linewidth": 1.5,
-            },
-            fontsize=10,
-            fontweight="bold",
-            color=ANNOTATION_COLOR,
-        )
+    ax.set_title(
+        "Detection Performance-Speed Trade-off"
+    )
 
     ax.set_xlabel(
         "Average FPS"
@@ -490,115 +618,218 @@ def create_tradeoff_figure(
         "Detection Count"
     )
 
-    ax.set_title(
-        "Detection Performance vs. Processing Speed",
-        pad=12,
+
+    # ----------------------------------------
+    # Axis Margins
+    # ----------------------------------------
+
+    fps_margin = (
+        (
+            fps_values.max()
+            - fps_values.min()
+        )
+        * 0.15
     )
 
-    style_axis(
-        ax,
-        grid_axis="both",
+    detection_margin = (
+        (
+            detection_counts.max()
+            - detection_counts.min()
+        )
+        * 0.25
     )
 
-    x_margin = max(fps) - min(fps)
-    y_margin = max(detection) - min(detection)
 
     ax.set_xlim(
-        min(fps) - max(
-            x_margin * 0.15,
-            0.5,
-        ),
-        max(fps) + max(
-            x_margin * 0.15,
-            0.5,
-        ),
+        fps_values.min()
+        - fps_margin,
+
+        fps_values.max()
+        + fps_margin
     )
+
 
     ax.set_ylim(
-        min(detection) - max(
-            y_margin * 0.12,
-            10,
-        ),
-        max(detection) + max(
-            y_margin * 0.18,
-            10,
-        ),
-    )
+        detection_counts.min()
+        - detection_margin,
 
-    fig.suptitle(
-        "Figure 3. Detection Performance-Speed Trade-off",
-        fontsize=FIGURE_TITLE_SIZE,
-        fontweight="bold",
-        y=1.02,
-    )
-
-    save_figure(
-        fig,
-        "figure3_tradeoff.png",
+        detection_counts.max()
+        + detection_margin
     )
 
 
-def main() -> None:
-    """Generate all README figures."""
+    ax.grid(
+        alpha=0.25
+    )
 
-    print("=" * 48)
-    print(" Industrial Vision Graph Generator")
-    print("=" * 48)
+
+    # ----------------------------------------
+    # Summary
+    # ----------------------------------------
+
+    best_detection_position = (
+        detection_counts
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+    best_fps_position = (
+        fps_values
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+    best_confidence_position = (
+        confidences
+        .reset_index(
+            drop=True
+        )
+        .idxmax()
+    )
+
+
+    best_detection_mode = (
+        modes[
+            best_detection_position
+        ]
+    )
+
+    best_fps_mode = (
+        modes[
+            best_fps_position
+        ]
+    )
+
+    best_confidence_mode = (
+        modes[
+            best_confidence_position
+        ]
+    )
+
+
+    summary = (
+        f"Highest Detection Count: "
+        f"{best_detection_mode}\n"
+        f"Highest FPS: "
+        f"{best_fps_mode}\n"
+        f"Highest Confidence: "
+        f"{best_confidence_mode}"
+    )
+
+
+    ax.text(
+        0.02,
+        0.98,
+
+        summary,
+
+        transform=ax.transAxes,
+
+        ha="left",
+        va="top",
+
+        fontsize=9,
+
+        bbox={
+            "boxstyle": "round",
+            "alpha": 0.1
+        }
+    )
+
+
+    fig.tight_layout()
+
+
+    output_path = (
+        ASSETS_DIR
+        / "figure3_tradeoff.png"
+    )
+
+
+    fig.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight"
+    )
+
+
+    plt.close(
+        fig
+    )
+
+
+    print(
+        f"Saved: {output_path}"
+    )
+
+
+# ============================================
+# Main
+# ============================================
+
+def main():
+
+    print(
+        "=" * 48
+    )
+
+    print(
+        " Industrial Vision Graph Generator"
+    )
+
+    print(
+        "=" * 48
+    )
+
 
     try:
-        methods, detection, confidence, fps = load_data()
+
+        df = load_data()
+
+
+        create_detection_performance_graph(
+            df
+        )
+
+        create_fps_graph(
+            df
+        )
+
+        create_tradeoff_graph(
+            df
+        )
+
+
+        print()
 
         print(
-            f"[INFO] Loaded metrics from: {CSV_PATH}"
-        )
-
-        create_detection_figure(
-            methods,
-            detection,
-            confidence,
-        )
-
-        print(
-            "[INFO] Figure 1 created."
-        )
-
-        create_fps_figure(
-            methods,
-            fps,
-        )
-
-        print(
-            "[INFO] Figure 2 created."
-        )
-
-        create_tradeoff_figure(
-            methods,
-            detection,
-            fps,
+            "=" * 48
         )
 
         print(
-            "[INFO] Figure 3 created."
+            " Graph Generation Complete"
         )
 
-    except (
-        FileNotFoundError,
-        ValueError,
-    ) as error:
+        print(
+            "=" * 48
+        )
+
+
+    except Exception as error:
+
         print(
             f"[ERROR] {error}"
         )
 
-        return
 
-    print("=" * 48)
-    print(" Graph generation complete")
-    print("=" * 48)
-
-    print(
-        f"Saved location: {OUTPUT_DIR}"
-    )
-
+# ============================================
+# Entry Point
+# ============================================
 
 if __name__ == "__main__":
+
     main()

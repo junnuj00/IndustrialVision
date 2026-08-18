@@ -11,7 +11,7 @@ class Config:
     CAMERA_INDEX = 0
 
     # Video
-    VIDEO_PATH = "inputs/videos/blue.mp4"
+    VIDEO_PATH = "inputs/videos/city.mp4"
 
 
 
@@ -21,7 +21,7 @@ class Config:
 
     MODEL_PATH = "models/yolo11n.pt"
 
-    CONF_THRESHOLD = 0.5
+    CONF_THRESHOLD = 0.25
 
     IOU_THRESHOLD = 0.45
 

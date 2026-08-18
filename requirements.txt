@@ -1,0 +1,19 @@
+# Core Computer Vision
+ultralytics==8.4.105
+opencv-python==5.0.0.93
+
+# Deep Learning
+torch==2.13.0
+torchvision==0.28.0
+
+# Vision-Language Model
+transformers==5.15.0
+accelerate==1.14.0
+Pillow==12.3.0
+
+# Data Processing
+numpy==2.5.1
+pandas==3.0.5
+
+# Visualization
+matplotlib==3.11.1

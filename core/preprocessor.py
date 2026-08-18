@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 
 class Preprocessor:
@@ -14,7 +15,6 @@ class Preprocessor:
         )
 
 
-
     # =========================
     # Gaussian Blur
     # =========================
@@ -28,47 +28,35 @@ class Preprocessor:
         )
 
 
-
     # =========================
     # CLAHE
     # =========================
 
     def clahe(self, frame):
 
-        # --------------------------------
         # 속도 개선을 위한 resize
-        # --------------------------------
-
         small = cv2.resize(
             frame,
             (960, 540)
         )
 
-
         # BGR → LAB 변환
-
         lab = cv2.cvtColor(
             small,
             cv2.COLOR_BGR2LAB
         )
 
-
         # L(밝기), A, B 채널 분리
-
         l, a, b = cv2.split(
             lab
         )
 
-
         # 밝기 채널에만 CLAHE 적용
-
         l = self.clahe_processor.apply(
             l
         )
 
-
         # 다시 합치기
-
         merged = cv2.merge(
             (
                 l,
@@ -77,19 +65,13 @@ class Preprocessor:
             )
         )
 
-
         # LAB → BGR
-
         result = cv2.cvtColor(
             merged,
             cv2.COLOR_LAB2BGR
         )
 
-
-        # --------------------------------
         # 원본 영상 크기로 복원
-        # --------------------------------
-
         result = cv2.resize(
             result,
             (
@@ -98,9 +80,7 @@ class Preprocessor:
             )
         )
 
-
         return result
-
 
 
     # =========================
@@ -114,16 +94,51 @@ class Preprocessor:
             cv2.COLOR_BGR2GRAY
         )
 
-
         equalized = cv2.equalizeHist(
             gray
         )
-
 
         result = cv2.cvtColor(
             equalized,
             cv2.COLOR_GRAY2BGR
         )
 
+        return result
+
+
+    # =========================
+    # Gamma Correction
+    # =========================
+
+    def gamma_correction(
+        self,
+        frame,
+        gamma=0.5
+    ):
+
+        if gamma <= 0:
+
+            raise ValueError(
+                "Gamma must be greater than 0."
+            )
+
+        # Lookup table 생성
+        table = np.array(
+            [
+                (
+                    (i / 255.0) ** gamma
+                ) * 255
+
+                for i in range(256)
+            ]
+        ).astype(
+            np.uint8
+        )
+
+        # 모든 pixel에 Gamma Correction 적용
+        result = cv2.LUT(
+            frame,
+            table
+        )
 
         return result

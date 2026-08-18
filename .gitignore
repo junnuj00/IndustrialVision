@@ -1,21 +1,68 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 
+# =========================
 # Virtual Environment
+# =========================
 cv_env/
+.venv/
+venv/
 
+# =========================
 # VS Code
+# =========================
 .vscode/
 
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
 # Outputs
+# =========================
 outputs/
 
-# YOLO training
+# =========================
+# Datasets
+# =========================
+datasets/
+
+# =========================
+# YOLO Training / Validation
+# =========================
 runs/
 
-# Video files
+# =========================
+# Video Files
+# =========================
 inputs/videos/*.mp4
+inputs/videos/*.avi
+inputs/videos/*.mov
+inputs/videos/*.mkv
 
-# YOLO weights
+# =========================
+# Model Weights
+# =========================
 models/*.pt
+models/*.pth
+models/*.onnx
+models/*.engine
+
+# =========================
+# Hugging Face / Model Cache
+# =========================
+.cache/
+huggingface/
+
+# =========================
+# Temporary / Log Files
+# =========================
+*.log
+*.tmp
